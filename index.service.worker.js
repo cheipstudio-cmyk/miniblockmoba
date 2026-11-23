@@ -21,6 +21,7 @@ const CACHEABLE_FILES = ["index.wasm","index.pck"];
 const FULL_CACHE = CACHED_FILES.concat(CACHEABLE_FILES);
 
 self.addEventListener('install', (event) => {
+	self.skipWaiting();
 	event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(CACHED_FILES)));
 });
 
@@ -32,7 +33,7 @@ self.addEventListener('activate', (event) => {
 		}
 	).then(function () {
 		// Enable navigation preload if available.
-		return ('navigationPreload' in self.registration) ? self.registration.navigationPreload.enable() : Promise.resolve();
+		return self.clients.claim();
 	}));
 });
 
@@ -105,6 +106,7 @@ self.addEventListener(
 				// Try to use cache first
 				const cache = await caches.open(CACHE_NAME);
 				if (isNavigate) {
+					try { const r = await fetch(event.request, {cache: 'no-store'}); cache.put(event.request, r.clone()); return r; } catch (e) { const c = await cache.match(event.request); if (c) { return c; } return caches.match(OFFLINE_URL); }
 					// Check if we have full cache during HTML page request.
 					/** @type {Response[]} */
 					const fullCache = await Promise.all(FULL_CACHE.map((name) => cache.match(name)));
